@@ -1,0 +1,41 @@
+{
+  "name": "react-native-lanscan",
+  "version": "1.0.0",
+  "description": "A React Native library for scanning LAN IPs and ports to find services via device Wi-Fi",
+  "main": "main-tf.js",
+  "scripts": {
+    "postinstall": "babel main.js --out-file main-tf.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Odinvt/react-native-lanscan.git"
+  },
+  "dependencies": {
+    "babel-cli": "^6.9.0",
+    "babel-core": "^6.9.1",
+    "babel-plugin-transform-es2015-constants": "^6.1.4",
+    "babel-preset-airbnb": "^2.0.0",
+    "babel-preset-react-native": "^1.9.0"
+  },
+  "devDependencies": {
+    "babel-eslint": "^4.1.6",
+    "eslint": "^1.10.3",
+    "eslint-config-zavatta": "^2.0.2"
+  },
+  "keywords": [
+    "react",
+    "native",
+    "react-native",
+    "lanscan",
+    "lan",
+    "scan",
+    "port",
+    "wifi"
+  ],
+  "author": "Oussama El Bacha",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Odinvt/react-native-lanscan/issues"
+  },
+  "homepage": "https://github.com/Odinvt/react-native-lanscan#readme"
+}
