@@ -156,6 +156,7 @@ public class LANScanModule extends ReactContextBaseJavaModule {
                         // tasks are completed or timeout ran out
                         while (true) {
                             completed_tasks = ((ThreadPoolExecutor) ManagedThreadPoolExecutor.THREAD_POOL_EXECUTOR_BROADCAST).getCompletedTaskCount();
+                            //Log.wtf("WAITING FOR TASKS BROADCAST : ", "WAITING FOR TASKS TO COMPLETE " + completed_tasks + "/" + task_count);
                             if (completed_tasks < task_count || endTime < timeout) {
                                 endTime = (new Date()).getTime() - startTime;
                                 continue;
@@ -167,13 +168,15 @@ public class LANScanModule extends ReactContextBaseJavaModule {
 
                             if(fallback) {
 
+                                //Log.wtf("FOUND DEVICES : ", "THE BROADCAST FOUND : " + available_hosts.size() + " hosts");
+
                                 // if no device are found and user wants to fallback to host to host port scan
                                 if (available_hosts.size() == 0) {
 
                                     sendEvent(getReactApplicationContext(), EVENT_STARTPINGS, null);
 
                                     ArrayList<String> connected = new ArrayList<>();
-                                    Log.wtf("NETWORK", "PINGING " + hosts_list.size() + " Hosts....");
+                                    //Log.wtf("NETWORK", "PINGING " + hosts_list.size() + " Hosts....");
                                     String device_ip = "";
                                     try {
                                         device_ip = intToIp(dhcp_info.ipAddress);
@@ -187,14 +190,14 @@ public class LANScanModule extends ReactContextBaseJavaModule {
                                             if (InetAddress.getByName(host).isReachable(ping_ms)) {
                                                 connected.add(host);
 
-                                                Log.wtf("HOST FOUND !!!", host + " RESPONDED");
+                                                //Log.wtf("HOST FOUND !!!", host + " RESPONDED");
                                                 sendEvent(getReactApplicationContext(), EVENT_HOSTFOUNDPING, host);
 
                                                 for (int i = min_port; i <= max_port; i++) {
                                                     sendDatagram(host, false, i, port_ms, ManagedThreadPoolExecutor.THREAD_POOL_EXECUTOR_PINGS);
                                                 }
                                             } else {
-                                                Log.wtf("HOST NOT RESPONSIVE", host + " is not responding");
+                                                //Log.wtf("HOST NOT RESPONSIVE", host + " is not responding");
                                             }
                                         } catch (IOException ioe) {
                                     /* do nothing just continue to the next host */
@@ -256,7 +259,7 @@ public class LANScanModule extends ReactContextBaseJavaModule {
             serverSocket.setBroadcast(broadcast);
             serverSocket.setReuseAddress(true);
             InetAddress IPAddress = InetAddress.getByName(broadcastAddr);
-            Log.wtf("Info", "Sending Discovery message to " + IPAddress.getHostAddress() + " Via UDP port " + port);
+            //Log.wtf("Info", "Sending Discovery message to " + IPAddress.getHostAddress() + " Via UDP port " + port);
 
             // we're sending "RNLS" message so if you need to check on the other devices on local network
             // you need to open an udp listener on port 'port' and wait for the message "RNLS" which is a byte[4]
@@ -268,7 +271,7 @@ public class LANScanModule extends ReactContextBaseJavaModule {
 
             final DatagramPacket sendPacket = new DatagramPacket(sendData,sendData.length,IPAddress,port);
 
-            Log.wtf("STARTING TASK : ", "STARTING RECEIVER TASK FOR " + broadcastAddr);
+            //Log.wtf("STARTING TASK : ", "STARTING RECEIVER TASK FOR " + broadcastAddr);
             // Execute a receiver task in the background to start waiting for LAN replies before sending packets
             final AsyncTask guarded_receive_task = new GuardedAsyncTask<Void, Void>(getReactApplicationContext()) {
                 @Override
@@ -281,20 +284,32 @@ public class LANScanModule extends ReactContextBaseJavaModule {
                     String device_ip = "";
                     try {
                         device_ip = intToIp(dhcp_info.ipAddress);
+
+                        // try to set a timeout for the receive operation of the socket in this thread as
+                        // without this if no host responds it will hang forever
+                        serverSocket.setSoTimeout((int) timeout_ms);
                     } catch (UnknownHostException e) {
                         e.printStackTrace();
+                    } catch (SocketException e) {
+                        e.printStackTrace();
+                        /* if the socket fails to set a timeout for the receive operation we need to force close this thread as
+                        other waiting process depend on it completing
+                         */
+
+                        return ;
                     }
+
 
                     //noinspection InfiniteLoopStatement
                     while(!isCancelled()) {
 
                         try {
-                            Log.wtf("NETWORK : ", "WAITING FOR DATAGRAM RESPONSE...");
+                            //Log.wtf("NETWORK : ", "WAITING FOR DATAGRAM RESPONSE...");
                             serverSocket.receive(receivePacket);
 
                             String sentence = new String( receivePacket.getData(), 0,
                                     receivePacket.getLength() );
-                            Log.wtf("RECEIVED PACKET : " , sentence + " FROM " + receivePacket.getAddress() + ":" + receivePacket.getPort());
+                            //Log.wtf("RECEIVED PACKET : " , sentence + " FROM " + receivePacket.getAddress() + ":" + receivePacket.getPort());
 
                             InetAddress address = receivePacket.getAddress();
                             String addr = address.getHostAddress();
@@ -303,7 +318,7 @@ public class LANScanModule extends ReactContextBaseJavaModule {
 
                             // skip if packet received from current device
                             if(addr.equals(device_ip)) {
-                                Log.wtf("SKIPING : ", "SKIPPING CURRENT DEVICE RESPONDED ....");
+                                //Log.wtf("SKIPING : ", "SKIPPING CURRENT DEVICE RESPONDED ....");
                                 continue;
                             }
 
@@ -321,7 +336,7 @@ public class LANScanModule extends ReactContextBaseJavaModule {
                             available_host.putString("host", addr);
                             available_host.putInt("port", port);
                             sendEvent(getReactApplicationContext(), EVENT_HOSTFOUND, available_host);
-                            Log.wtf("NETWORK : ", "LOOPING BACK FOR THE NEXT DATAGRAM RECEIVE...");
+                            //Log.wtf("NETWORK : ", "LOOPING BACK FOR THE NEXT DATAGRAM RECEIVE...");
                         } catch (IOException e) {
                             Log.e("IOE", e.getMessage());
                             /* cancel current task if can't listen for packets */
@@ -332,7 +347,7 @@ public class LANScanModule extends ReactContextBaseJavaModule {
 
                 @Override
                 protected void onCancelled() {
-                    Log.wtf("CLOSING TASK : ", "CLOSING RECEIVER TASK FOR " + broadcastAddr);
+                    //Log.wtf("CLOSING TASK : ", "CLOSING RECEIVER TASK FOR " + broadcastAddr);
 
                     // at this point the socket is not used anymore so we can go ahead and close it
                     serverSocket.disconnect();
@@ -340,7 +355,7 @@ public class LANScanModule extends ReactContextBaseJavaModule {
                 }
             }.executeOnExecutor(thread_pool);
 
-            Log.wtf("STARTING TASK : ", "STARTING SENDER TASK FOR " + broadcastAddr);
+            //Log.wtf("STARTING TASK : ", "STARTING SENDER TASK FOR " + broadcastAddr);
             // start sending packets on a background task until it is cancelled then trigger end broadcast event
             // if it is a broadcast address
             final AsyncTask guarded_send_task = new GuardedAsyncTask<Void, Void>(getReactApplicationContext()) {
@@ -350,7 +365,7 @@ public class LANScanModule extends ReactContextBaseJavaModule {
 
                     while(!isCancelled()) {
                         try {
-                            //Log.wtf("SENDING PACKET : " , sendPacket.getData().toString() + " TO " + broadcastAddr + ":" + port);
+                            ////Log.wtf("SENDING PACKET : " , sendPacket.getData().toString() + " TO " + broadcastAddr + ":" + port);
                             serverSocket.send(sendPacket);
                         } catch (IOException e) {
                             /* do nothing just continue the loop to send the next packet */
@@ -359,7 +374,7 @@ public class LANScanModule extends ReactContextBaseJavaModule {
                     }
                     // when we exit the loop it means that the task has been cancelled and we're not sending packets anymore
 
-                    Log.wtf("CLOSING TASK : ", "TRYING TO CLOSE RECEIVER TASK FROM SENDER FOR " + broadcastAddr);
+                    //Log.wtf("CLOSING TASK : ", "TRYING TO CLOSE RECEIVER TASK FROM SENDER FOR " + broadcastAddr);
                     // shutdown the receiver task since we're not gonna be needing it anymore
                     if(guarded_receive_task != null)
                         guarded_receive_task.cancel(true);
@@ -367,7 +382,7 @@ public class LANScanModule extends ReactContextBaseJavaModule {
 
                 @Override
                 protected void onCancelled() {
-                    Log.wtf("CLOSING TASK : ", "CLOSING SENDER TASK FOR " + broadcastAddr);
+                    //Log.wtf("CLOSING TASK : ", "CLOSING SENDER TASK FOR " + broadcastAddr);
 
                 }
             }.executeOnExecutor(thread_pool);
@@ -377,9 +392,10 @@ public class LANScanModule extends ReactContextBaseJavaModule {
                 @Override
                 protected void doInBackgroundGuarded(Void... params) {
                     SystemClock.sleep(timeout_ms);
-                    Log.wtf("WAITED TIMEOUT : ", "WAIT FOR TIMEOUT FINISHED TRYING TO CLOSE SENDER TASK FOR " + broadcastAddr + "...");
+                    //Log.wtf("WAITED TIMEOUT : ", "WAIT FOR TIMEOUT FINISHED TRYING TO CLOSE SENDER TASK FOR " + broadcastAddr + "...");
                     if(guarded_send_task != null)
                         guarded_send_task.cancel(true);
+                    this.cancel(true);
                 }
             }.executeOnExecutor(thread_pool);
 
@@ -455,7 +471,7 @@ public class LANScanModule extends ReactContextBaseJavaModule {
         reactContext
                 .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
                 .emit(eventName, params);
-        Log.wtf("EVENT : ", "TRIGGERED EVENT " + eventName);
+        //Log.wtf("EVENT : ", "TRIGGERED EVENT " + eventName);
     }
 
 }

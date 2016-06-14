@@ -215,17 +215,17 @@ lanscan.on('info_fetched', (info) => {
 
 ###### `port_out_of_range_error` Triggers when the specified min_port and max_port ports are out of range
 
- - Broadcast a `string` message of the error.
+ - Broadcasts a `string` message of the error.
  - This error does break the execution of the whole process.
 
 ###### `fetch_error` Triggers when fetchInfo() of the device Wi-Fi State fails
 
- - Broadcast a `string` message of the error.
+ - Broadcasts a `string` message of the error.
  - This error does break the execution of the whole process.
 
 ###### `error` Triggers whenever an error occurs during the process
 
- - Broadcast a `string` message of the error.
+ - Broadcasts a `string` message of the error.
  - This error does break the execution of the whole process.
 
 ### Java Service Example

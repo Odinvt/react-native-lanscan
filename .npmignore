@@ -1,8 +1,8 @@
 node_modules/
+.git/
 
 build/
 android/build/
-.git/
 *.pbxuser
 !default.pbxuser
 *.mode1v3
