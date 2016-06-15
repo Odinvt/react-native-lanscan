@@ -22,6 +22,7 @@ Here is how it works :
  - If it does not find any hosts, either there aren't any or the switch is blocking subnet broadcast packets. So if you choose to do so, the package falls back to a **DeepScan**.
  - The **DeepScan** consists of sending ICMP ECHO requests to the list of the possible network IPs that was calculated before. (This only works if the switch is not blocking ICMP requests. If it is, well... there isn't much we can do, is there ? :D)
  - Keeps sending datagram UDP packets to each connected host on the same port range and keeps waiting for replies.
+ - Once the services are found, you can then initialize a socket connection to those services using the awesome [react-native-udp](https://github.com/tradle/react-native-udp) package or its fork the [react-native-tcp](https://github.com/PeelTechnologies/react-native-tcp) package by [Andy Prock](https://github.com/aprock) depending on your needs.
 
 ### Install
     npm i -S react-native-lanscan
@@ -149,9 +150,9 @@ if those are the hosts that have services listening on respective UDP ports. Kee
 ##### Events
 
 ```javascript
-    lanscan.on('eventName', (params...) => {
-        ...
-    })
+lanscan.on('eventName', (params...) => {
+    ...
+})
 ```
 
 ###### `start` Triggered on scan start
@@ -180,7 +181,46 @@ lanscan.on('info_fetched', (info) => {
     }
 
 ###### `start_broadcast` Triggered when the broadcast discovery starts before any packets are sent
-###### `host_found`
+###### `host_found` Triggered when a host is found with a service running on it
+
+ - Broadcasts an `object`. This object has a `string` property named `host` which is the IP address of the found host, and an `int` property named `port` which is the port of the service that responded.
+ - Broadcasts an `object` of the available hosts up until the current host was discovered. The keys of the object are the `IP addresses` and the values are `array`s of the ports that services are listening on, on those hosts.
+ - Can trigger either when a host responds to a broadcast UDP packet on a port, or when a host responds to a host-specific UDP packet that was sent to it after it was discovered by an ICMP ECHO request.
+ - You can safely use this event to update your UI and show the current found services.
+
+
+```javascript
+
+lanscan.on('host_found', (host, currentAvailableHosts) => {
+   // update my UI
+})
+lanscan.scan(48500, 48503, 100, true, 20, 100);
+
+```
+
+`host` is equal to :
+
+    {
+      host : "192.168.1.15",
+      port : 48501
+    }
+
+If the service on `192.168.1.15:48501` responded to a UDP packet.
+
+`currentAvailableHosts` is equal to :
+
+    {
+      "192.168.1.10" : [48500, 48502, 48503],
+      "192.168.1.15" : [48501]
+    }
+
+If those are the services that it found up until the event was triggered. If it finds another service on `192.168.1.15:48502`, then, in another `host_found` event trigger, it would just add that to the ports array :
+
+    {
+      "192.168.1.10" : [48500, 48502, 48503],
+      "192.168.1.15" : [48501, 48502]
+    }
+
 ###### `end_broadcast` Triggered when the broadcast discovery threads finish
 
  - You can use this to call `getAvailableHosts()` **but only if** you set the `fallback` parameter of the `scan` call to `false`.
@@ -207,7 +247,7 @@ lanscan.on('info_fetched', (info) => {
 
 ###### `end_pings` Triggered when all the pings are finished
 
- - Do not use this to call `getAvailableHosts()` as it threads that send and receive datagram packets may be still running when this event is triggered.
+ - Do not use this to call `getAvailableHosts()` as the threads that send and receive datagram packets may still be running when this event is triggered.
 
 ###### `end` Triggered when scan stops (when all threads finish)
 
@@ -225,6 +265,7 @@ lanscan.on('info_fetched', (info) => {
 
 ###### `error` Triggers whenever an error occurs during the process
 
+ - This includes `port_out_of_range_error` and `fetch_error` errors.
  - Broadcasts a `string` message of the error.
  - This error does break the execution of the whole process.
 
