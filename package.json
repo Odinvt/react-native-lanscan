@@ -1,6 +1,6 @@
 {
   "name": "react-native-lanscan",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "description": "A React Native library for scanning LAN IPs and ports to find services via device Wi-Fi",
   "main": "main-tf.js",
   "scripts": {
