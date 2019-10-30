@@ -19,7 +19,7 @@
   },
   "devDependencies": {
     "babel-eslint": "^4.1.6",
-    "eslint": "^1.10.3",
+    "eslint": "^6.6.0",
     "eslint-config-zavatta": "^2.0.2"
   },
   "keywords": [
